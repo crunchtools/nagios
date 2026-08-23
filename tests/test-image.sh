@@ -27,8 +27,17 @@ static_tests() {
     check "nagios package installed" \
         $RUNTIME run --rm "$image" rpm -q nagios
 
-    check "nagios-plugins-all installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-all
+    check "nagios-plugins-http installed" \
+        $RUNTIME run --rm "$image" rpm -q nagios-plugins-http
+
+    check "nagios-plugins-tcp installed" \
+        $RUNTIME run --rm "$image" rpm -q nagios-plugins-tcp
+
+    check "nagios-plugins-load installed" \
+        $RUNTIME run --rm "$image" rpm -q nagios-plugins-load
+
+    check "nagios-plugins-disk installed" \
+        $RUNTIME run --rm "$image" rpm -q nagios-plugins-disk
 
     check "nagios-plugins-nrpe installed" \
         $RUNTIME run --rm "$image" rpm -q nagios-plugins-nrpe

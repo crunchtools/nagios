@@ -12,12 +12,24 @@ RUN --mount=type=secret,id=activation_key \
 COPY rootfs/ /
 
 # EPEL 10 for Nagios packages
+# nagios-plugins-all drags in disk_smb which needs perl(utf8::all) — missing in UBI 10.
+# Install the plugins we actually use instead.
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
     dnf install -y \
     nagios \
-    nagios-plugins-all \
+    nagios-plugins-ping \
+    nagios-plugins-http \
+    nagios-plugins-tcp \
+    nagios-plugins-load \
+    nagios-plugins-disk \
+    nagios-plugins-procs \
+    nagios-plugins-swap \
+    nagios-plugins-users \
+    nagios-plugins-ssh \
     nagios-plugins-nrpe \
     nagios-plugins-by_ssh \
+    nagios-plugins-ntp \
+    nagios-plugins-dns \
     curl \
     jq \
     && dnf clean all
