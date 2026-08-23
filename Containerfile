@@ -48,8 +48,12 @@ RUN chown -R root:nagios /etc/nagios/private && \
     chmod 2770 /var/spool/nagios/cmd && \
     rm -f /etc/httpd/conf.d/welcome.conf
 
+# Oneshot to re-add apache to nagios group on every boot
+# (--tmpfs /etc wipes /etc/group from the image layer on each start)
+RUN printf '[Unit]\nDescription=Fix Nagios command pipe permissions\nBefore=nagios.service httpd.service\n\n[Service]\nType=oneshot\nExecStart=/bin/bash -c "usermod -aG nagios apache && chmod 2770 /var/spool/nagios/cmd"\n\n[Install]\nWantedBy=multi-user.target\n' > /etc/systemd/system/nagios-fix-perms.service
+
 # Enable services
-RUN systemctl enable nagios httpd
+RUN systemctl enable nagios httpd nagios-fix-perms
 
 LABEL maintainer="fatherlinux <scott.mccarty@crunchtools.com>"
 LABEL description="Nagios Core monitoring — all configs bind-mounted from host"
