@@ -40,13 +40,16 @@ RUN subscription-manager unregister 2>/dev/null || true
 # Serve Nagios at /nagios (default), remove welcome page
 RUN rm -f /etc/httpd/conf.d/welcome.conf
 
-# Ensure Nagios runtime directories and resource file exist
-RUN mkdir -p /var/spool/nagios/checkresults /var/log/nagios/rw /var/log/nagios/spool && \
+# Ensure Nagios runtime directories exist and resource.cfg is readable.
+# The EPEL package sometimes skips these in a container context.
+RUN mkdir -p /var/spool/nagios/checkresults /var/log/nagios/rw /var/log/nagios/spool /var/spool/nagios/cmd && \
     chown -R nagios:nagios /var/spool/nagios /var/log/nagios && \
     mkdir -p /etc/nagios/private && \
-    echo '$USER1$=/usr/lib64/nagios/plugins' > /etc/nagios/private/resource.cfg && \
-    chown nagios:nagios /etc/nagios/private/resource.cfg && \
-    chmod 640 /etc/nagios/private/resource.cfg
+    cp -n /etc/nagios/private/resource.cfg.rpmnew /etc/nagios/private/resource.cfg 2>/dev/null; \
+    test -f /etc/nagios/private/resource.cfg || echo '$USER1$=/usr/lib64/nagios/plugins' > /etc/nagios/private/resource.cfg && \
+    chown root:nagios /etc/nagios/private/resource.cfg && \
+    chmod 640 /etc/nagios/private/resource.cfg && \
+    ls -la /etc/nagios/private/ && cat /etc/nagios/private/resource.cfg
 
 # Make notification scripts executable
 RUN chmod +x /usr/local/bin/notify_hermes.sh
