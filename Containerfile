@@ -54,8 +54,8 @@ RUN mkdir -p /etc/nagios/objects/custom && \
 # Remove welcome page, serve Nagios web UI
 RUN rm -f /etc/httpd/conf.d/welcome.conf
 
-# Make notification scripts executable
-RUN chmod +x /usr/local/bin/notify_hermes.sh
+# Make scripts executable
+RUN chmod +x /usr/local/bin/notify_hermes.sh /usr/local/bin/check_https_basicauth.sh
 
 # Install mailx for email notifications via Postfix relay
 RUN dnf install -y mailx && dnf clean all
