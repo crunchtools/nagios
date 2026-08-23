@@ -9,9 +9,7 @@ RUN --mount=type=secret,id=activation_key \
             --org="$(cat /run/secrets/org_id)"; \
     fi
 
-# EPEL 10 for Nagios packages — install BEFORE rootfs overlay so RPM creates
-# all default configs, dirs, and the nagios user. Our overlay then replaces
-# only the files we customize (commands, contacts, templates, timeperiods).
+# EPEL 10 for Nagios packages
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
     dnf install -y \
     nagios \
@@ -30,43 +28,31 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
     nagios-plugins-dns \
     curl \
     jq \
+    mailx \
     && dnf clean all
 
 # Unregister from RHSM to avoid leaking entitlements
 RUN subscription-manager unregister 2>/dev/null || true
 
-# Overlay custom configs ON TOP of RPM defaults
-COPY rootfs/ /
-
-# Fix ownership: EPEL nagios RPM installs private/resource.cfg as root:root
-# but nagios reads it as uid nagios. Also ensure runtime directories exist.
+# Structural setup — these rarely change
 RUN chown -R root:nagios /etc/nagios/private && \
     mkdir -p /var/spool/nagios/checkresults /var/spool/nagios/cmd \
-             /var/log/nagios/rw /var/log/nagios/spool && \
-    chown -R nagios:nagios /var/spool/nagios /var/log/nagios
-
-# Wire custom config directory and set CGI auth user
-RUN mkdir -p /etc/nagios/objects/custom && \
+             /var/log/nagios/rw /var/log/nagios/spool \
+             /etc/nagios/objects/custom /etc/nagios/auth && \
+    chown -R nagios:nagios /var/spool/nagios /var/log/nagios && \
     chown root:nagios /etc/nagios/objects/custom && \
     echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg && \
-    sed -i 's/nagiosadmin/admin/g' /etc/nagios/cgi.cfg
-
-# Remove welcome page, serve Nagios web UI
-RUN rm -f /etc/httpd/conf.d/welcome.conf
-
-# Make scripts executable
-RUN chmod +x /usr/local/bin/notify_hermes.sh /usr/local/bin/check_https_basicauth.sh
-
-# Install mailx for email notifications via Postfix relay
-RUN dnf install -y mailx && dnf clean all
+    sed -i 's/nagiosadmin/admin/g' /etc/nagios/cgi.cfg && \
+    chmod u+s /usr/lib64/nagios/plugins/check_ping && \
+    rm -f /etc/httpd/conf.d/welcome.conf
 
 # Enable services
 RUN systemctl enable nagios httpd
 
 LABEL maintainer="fatherlinux <scott.mccarty@crunchtools.com>"
-LABEL description="Nagios Core monitoring with Hermes agent notification"
+LABEL description="Nagios Core monitoring — all configs bind-mounted from host"
 LABEL org.opencontainers.image.source=https://github.com/crunchtools/nagios
-LABEL org.opencontainers.image.description="Nagios Core on UBI 10 with dual notification: email via Postfix + webhook via Trentina/Hermes"
+LABEL org.opencontainers.image.description="Nagios Core on UBI 10 — config, scripts, and credentials are bind-mounted at runtime"
 LABEL org.opencontainers.image.licenses=AGPL-3.0-or-later
 
 ENTRYPOINT ["/sbin/init"]
