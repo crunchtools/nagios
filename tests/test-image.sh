@@ -73,13 +73,6 @@ runtime_tests() {
 
     sleep 3
 
-    echo "  --- Pre-test debug ---"
-    $RUNTIME exec "$container" ls -la /etc/nagios/private/ 2>&1 || echo "  /etc/nagios/private/ missing!"
-    $RUNTIME exec "$container" grep resource_file /etc/nagios/nagios.cfg 2>&1 || true
-    $RUNTIME exec "$container" id nagios 2>&1 || true
-    $RUNTIME exec "$container" /usr/sbin/nagios -v /etc/nagios/nagios.cfg 2>&1 | grep -i "error\|warning\|cannot\|invalid\|Read main" | head -20 || true
-    echo "  --- End debug ---"
-
     check "nagios process running" \
         $RUNTIME exec "$container" pgrep -x nagios
 

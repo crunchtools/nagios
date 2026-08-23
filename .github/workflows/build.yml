@@ -39,7 +39,8 @@ jobs:
           secrets: |
             activation_key=${{ secrets.RHSM_ACTIVATION_KEY }}
             org_id=${{ secrets.RHSM_ORG_ID }}
-          no-cache: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run static tests
         run: |
