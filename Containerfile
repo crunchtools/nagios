@@ -38,8 +38,10 @@ RUN subscription-manager unregister 2>/dev/null || true
 # Overlay custom configs ON TOP of RPM defaults
 COPY rootfs/ /
 
-# Ensure runtime directories exist (container context may skip some)
-RUN mkdir -p /var/spool/nagios/checkresults /var/spool/nagios/cmd \
+# Fix ownership: EPEL nagios RPM installs private/resource.cfg as root:root
+# but nagios reads it as uid nagios. Also ensure runtime directories exist.
+RUN chown -R root:nagios /etc/nagios/private && \
+    mkdir -p /var/spool/nagios/checkresults /var/spool/nagios/cmd \
              /var/log/nagios/rw /var/log/nagios/spool && \
     chown -R nagios:nagios /var/spool/nagios /var/log/nagios
 
