@@ -53,14 +53,14 @@ RUN mkdir -p /etc/nagios/objects/custom && \
 # Remove welcome page, serve Nagios web UI
 RUN rm -f /etc/httpd/conf.d/welcome.conf
 
-# Make scripts executable
-RUN chmod +x /usr/local/bin/notify_hermes.sh /usr/local/bin/nagios_heartbeat.sh
+# Make notification scripts executable
+RUN chmod +x /usr/local/bin/notify_hermes.sh
 
-# Install mailx for heartbeat emails via Postfix relay
+# Install mailx for email notifications via Postfix relay
 RUN dnf install -y mailx && dnf clean all
 
-# Enable services and dead-man's switch timer
-RUN systemctl enable nagios httpd nagios-heartbeat.timer
+# Enable services
+RUN systemctl enable nagios httpd
 
 LABEL maintainer="fatherlinux <scott.mccarty@crunchtools.com>"
 LABEL description="Nagios Core monitoring with Hermes agent notification"

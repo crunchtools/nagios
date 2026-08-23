@@ -1,7 +1,0 @@
-[Unit]
-Description=Nagios dead-man's switch heartbeat email
-After=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/nagios_heartbeat.sh
