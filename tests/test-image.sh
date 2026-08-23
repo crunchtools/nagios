@@ -3,7 +3,7 @@
 # Usage: ./test-image.sh --static <image>
 #        ./test-image.sh --runtime <image>
 
-set -euo pipefail
+set -uo pipefail
 
 RUNTIME="${CONTAINER_RUNTIME:-docker}"
 PASS=0
@@ -13,10 +13,10 @@ check() {
     local desc="$1"; shift
     if "$@" >/dev/null 2>&1; then
         echo "  PASS: $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  FAIL: $desc"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
