@@ -1,3 +1,4 @@
 # Relay through local Postfix at mail.crunchtools.com (10.88.0.1:25)
-set smtp=smtp://10.88.0.1:25
-set from="nagios@crunchtools.com"
+set v15-compat
+set mta=smtp://10.88.0.1:25
+set from=nagios@crunchtools.com
