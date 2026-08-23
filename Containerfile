@@ -44,6 +44,8 @@ RUN chown -R root:nagios /etc/nagios/private && \
     echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg && \
     sed -i 's/nagiosadmin/admin/g' /etc/nagios/cgi.cfg && \
     chmod u+s /usr/lib64/nagios/plugins/check_ping && \
+    usermod -aG nagios apache && \
+    chmod 2770 /var/spool/nagios/cmd && \
     rm -f /etc/httpd/conf.d/welcome.conf
 
 # Enable services
