@@ -20,60 +20,32 @@ check() {
     fi
 }
 
+run_in_image() {
+    $RUNTIME run --rm --entrypoint /bin/sh "$IMAGE" -c "$*"
+}
+
 static_tests() {
-    local image="$1"
-    echo "=== Static tests for $image ==="
+    IMAGE="$1"
+    echo "=== Static tests for $IMAGE ==="
 
-    check "nagios package installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios
-
-    check "nagios-plugins-http installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-http
-
-    check "nagios-plugins-tcp installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-tcp
-
-    check "nagios-plugins-load installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-load
-
-    check "nagios-plugins-disk installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-disk
-
-    check "nagios-plugins-nrpe installed" \
-        $RUNTIME run --rm "$image" rpm -q nagios-plugins-nrpe
-
-    check "curl installed" \
-        $RUNTIME run --rm "$image" rpm -q curl
-
-    check "jq installed" \
-        $RUNTIME run --rm "$image" rpm -q jq
-
-    check "notify_hermes.sh exists and executable" \
-        $RUNTIME run --rm "$image" test -x /usr/local/bin/notify_hermes.sh
-
-    check "commands.cfg exists" \
-        $RUNTIME run --rm "$image" test -f /etc/nagios/objects/commands.cfg
-
-    check "contacts.cfg exists" \
-        $RUNTIME run --rm "$image" test -f /etc/nagios/objects/contacts.cfg
-
-    check "templates.cfg exists" \
-        $RUNTIME run --rm "$image" test -f /etc/nagios/objects/templates.cfg
-
-    check "timeperiods.cfg exists" \
-        $RUNTIME run --rm "$image" test -f /etc/nagios/objects/timeperiods.cfg
-
-    check "nagios service enabled" \
-        $RUNTIME run --rm "$image" systemctl is-enabled nagios
-
-    check "httpd service enabled" \
-        $RUNTIME run --rm "$image" systemctl is-enabled httpd
-
-    check "nagios restart drop-in exists" \
-        $RUNTIME run --rm "$image" test -f /etc/systemd/system/nagios.service.d/restart.conf
-
+    check "nagios package installed"            run_in_image "rpm -q nagios"
+    check "nagios-plugins-http installed"        run_in_image "rpm -q nagios-plugins-http"
+    check "nagios-plugins-tcp installed"         run_in_image "rpm -q nagios-plugins-tcp"
+    check "nagios-plugins-load installed"        run_in_image "rpm -q nagios-plugins-load"
+    check "nagios-plugins-disk installed"        run_in_image "rpm -q nagios-plugins-disk"
+    check "nagios-plugins-nrpe installed"        run_in_image "rpm -q nagios-plugins-nrpe"
+    check "curl installed"                       run_in_image "rpm -q curl"
+    check "jq installed"                         run_in_image "rpm -q jq"
+    check "notify_hermes.sh exists"              run_in_image "test -x /usr/local/bin/notify_hermes.sh"
+    check "commands.cfg exists"                  run_in_image "test -f /etc/nagios/objects/commands.cfg"
+    check "contacts.cfg exists"                  run_in_image "test -f /etc/nagios/objects/contacts.cfg"
+    check "templates.cfg exists"                 run_in_image "test -f /etc/nagios/objects/templates.cfg"
+    check "timeperiods.cfg exists"               run_in_image "test -f /etc/nagios/objects/timeperiods.cfg"
+    check "nagios service enabled"               run_in_image "systemctl is-enabled nagios"
+    check "httpd service enabled"                run_in_image "systemctl is-enabled httpd"
+    check "nagios restart drop-in exists"        run_in_image "test -f /etc/systemd/system/nagios.service.d/restart.conf"
     check "entrypoint is /sbin/init" \
-        $RUNTIME inspect "$image" --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init
+        $RUNTIME inspect "$IMAGE" --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init
 }
 
 runtime_tests() {
