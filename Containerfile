@@ -9,11 +9,9 @@ RUN --mount=type=secret,id=activation_key \
             --org="$(cat /run/secrets/org_id)"; \
     fi
 
-COPY rootfs/ /
-
-# EPEL 10 for Nagios packages
-# nagios-plugins-all drags in disk_smb which needs perl(utf8::all) — missing in UBI 10.
-# Install the plugins we actually use instead.
+# EPEL 10 for Nagios packages — install BEFORE rootfs overlay so RPM creates
+# all default configs, dirs, and the nagios user. Our overlay then replaces
+# only the files we customize (commands, contacts, templates, timeperiods).
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
     dnf install -y \
     nagios \
@@ -37,19 +35,16 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
 # Unregister from RHSM to avoid leaking entitlements
 RUN subscription-manager unregister 2>/dev/null || true
 
-# Serve Nagios at /nagios (default), remove welcome page
-RUN rm -f /etc/httpd/conf.d/welcome.conf
+# Overlay custom configs ON TOP of RPM defaults
+COPY rootfs/ /
 
-# Ensure Nagios runtime directories exist and resource.cfg is readable.
-# The EPEL package sometimes skips these in a container context.
-RUN mkdir -p /var/spool/nagios/checkresults /var/log/nagios/rw /var/log/nagios/spool /var/spool/nagios/cmd && \
-    chown -R nagios:nagios /var/spool/nagios /var/log/nagios && \
-    mkdir -p /etc/nagios/private && \
-    cp -n /etc/nagios/private/resource.cfg.rpmnew /etc/nagios/private/resource.cfg 2>/dev/null; \
-    test -f /etc/nagios/private/resource.cfg || echo '$USER1$=/usr/lib64/nagios/plugins' > /etc/nagios/private/resource.cfg && \
-    chown root:nagios /etc/nagios/private/resource.cfg && \
-    chmod 640 /etc/nagios/private/resource.cfg && \
-    ls -la /etc/nagios/private/ && cat /etc/nagios/private/resource.cfg
+# Ensure runtime directories exist (container context may skip some)
+RUN mkdir -p /var/spool/nagios/checkresults /var/spool/nagios/cmd \
+             /var/log/nagios/rw /var/log/nagios/spool && \
+    chown -R nagios:nagios /var/spool/nagios /var/log/nagios
+
+# Remove welcome page, serve Nagios web UI
+RUN rm -f /etc/httpd/conf.d/welcome.conf
 
 # Make notification scripts executable
 RUN chmod +x /usr/local/bin/notify_hermes.sh
