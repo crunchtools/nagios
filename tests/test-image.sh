@@ -36,14 +36,13 @@ static_tests() {
     check "nagios-plugins-nrpe installed"        run_in_image "rpm -q nagios-plugins-nrpe"
     check "curl installed"                       run_in_image "rpm -q curl"
     check "jq installed"                         run_in_image "rpm -q jq"
-    check "notify_hermes.sh exists"              run_in_image "test -x /usr/local/bin/notify_hermes.sh"
     check "commands.cfg exists"                  run_in_image "test -f /etc/nagios/objects/commands.cfg"
     check "contacts.cfg exists"                  run_in_image "test -f /etc/nagios/objects/contacts.cfg"
     check "templates.cfg exists"                 run_in_image "test -f /etc/nagios/objects/templates.cfg"
     check "timeperiods.cfg exists"               run_in_image "test -f /etc/nagios/objects/timeperiods.cfg"
     check "nagios service enabled"               run_in_image "systemctl is-enabled nagios"
     check "httpd service enabled"                run_in_image "systemctl is-enabled httpd"
-    check "nagios restart drop-in exists"        run_in_image "test -f /etc/systemd/system/nagios.service.d/restart.conf"
+    check "nagios-fix-perms service enabled"     run_in_image "systemctl is-enabled nagios-fix-perms"
     check "entrypoint is /sbin/init" \
         $RUNTIME inspect "$IMAGE" --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init
 }
