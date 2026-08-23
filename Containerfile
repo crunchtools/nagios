@@ -45,10 +45,11 @@ RUN chown -R root:nagios /etc/nagios/private && \
              /var/log/nagios/rw /var/log/nagios/spool && \
     chown -R nagios:nagios /var/spool/nagios /var/log/nagios
 
-# Wire custom config directory (host-mounted at runtime)
+# Wire custom config directory and set CGI auth user
 RUN mkdir -p /etc/nagios/objects/custom && \
     chown root:nagios /etc/nagios/objects/custom && \
-    echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg
+    echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg && \
+    sed -i 's/nagiosadmin/admin/g' /etc/nagios/cgi.cfg
 
 # Remove welcome page, serve Nagios web UI
 RUN rm -f /etc/httpd/conf.d/welcome.conf
