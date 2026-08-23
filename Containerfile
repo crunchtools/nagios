@@ -42,6 +42,7 @@ RUN chown -R root:nagios /etc/nagios/private && \
     chown -R nagios:nagios /var/spool/nagios /var/log/nagios && \
     chown root:nagios /etc/nagios/objects/custom && \
     echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg && \
+    sed -i '/cfg_file=.*localhost.cfg/d' /etc/nagios/nagios.cfg && \
     sed -i 's/nagiosadmin/admin/g' /etc/nagios/cgi.cfg && \
     chmod u+s /usr/lib64/nagios/plugins/check_ping && \
     usermod -aG nagios apache && \
