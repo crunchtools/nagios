@@ -45,14 +45,22 @@ RUN chown -R root:nagios /etc/nagios/private && \
              /var/log/nagios/rw /var/log/nagios/spool && \
     chown -R nagios:nagios /var/spool/nagios /var/log/nagios
 
+# Wire custom config directory (host-mounted at runtime)
+RUN mkdir -p /etc/nagios/objects/custom && \
+    chown root:nagios /etc/nagios/objects/custom && \
+    echo "cfg_dir=/etc/nagios/objects/custom" >> /etc/nagios/nagios.cfg
+
 # Remove welcome page, serve Nagios web UI
 RUN rm -f /etc/httpd/conf.d/welcome.conf
 
-# Make notification scripts executable
-RUN chmod +x /usr/local/bin/notify_hermes.sh
+# Make scripts executable
+RUN chmod +x /usr/local/bin/notify_hermes.sh /usr/local/bin/nagios_heartbeat.sh
 
-# Enable services
-RUN systemctl enable nagios httpd
+# Install mailx for heartbeat emails via Postfix relay
+RUN dnf install -y mailx && dnf clean all
+
+# Enable services and dead-man's switch timer
+RUN systemctl enable nagios httpd nagios-heartbeat.timer
 
 LABEL maintainer="fatherlinux <scott.mccarty@crunchtools.com>"
 LABEL description="Nagios Core monitoring with Hermes agent notification"
