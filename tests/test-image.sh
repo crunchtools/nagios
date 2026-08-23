@@ -100,9 +100,7 @@ runtime_tests() {
 
     if [ $FAIL -gt 0 ]; then
         echo "  --- DEBUG ---"
-        $RUNTIME exec "$container" systemctl status nagios --no-pager 2>&1 | head -20 || true
-        $RUNTIME exec "$container" systemctl status httpd --no-pager 2>&1 | head -20 || true
-        $RUNTIME exec "$container" journalctl --no-pager -n 30 2>&1 || true
+        $RUNTIME exec "$container" journalctl -u nagios --no-pager 2>&1 || true
     fi
 }
 
