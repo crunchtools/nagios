@@ -1,71 +1,77 @@
 # Nagios Container Constitution
 
-> **Version:** 1.0.1
+> **Version:** 1.1.0
 > **Ratified:** 2026-08-22
+> **Amended:** 2026-10-02
 > **Status:** Active
-> **Inherits:** [crunchtools/constitution](https://github.com/crunchtools/constitution) v1.17.0
+> **Inherits:** [crunchtools/constitution](https://github.com/crunchtools/constitution) v1.18.0
 > **Profile:** Container Image
 
-## License
+This file holds what is specific to nagios. The fleet rules and the Container
+Image profile (license, versioning, LABELs, the RHSM secret-mount pattern,
+systemd conventions, registry, testing and quality gates) apply at the
+inherited version and are checked against this repo's files by
+`constitution.yml`. They are not restated here.
 
-AGPL-3.0-or-later.
+## Purpose
 
-## Versioning
+Nagios Core monitoring for all crunchtools infrastructure, replacing Zabbix
+(RT #1459). Published as `quay.io/crunchtools/nagios`.
 
-Semantic Versioning 2.0.0. The image version tracks this repo's packaging and
-configuration, not the upstream Nagios Core release — a rebuild that only picks
-up a newer EPEL `nagios` RPM is a PATCH here.
+## Parent Image
 
-## Registry
+`quay.io/crunchtools/ubi10-httpd`, for Apache serving the Nagios CGI web
+interface. No PHP or Perl layer is needed: the Nagios CGIs are compiled C.
 
-Published to `quay.io/crunchtools/nagios`.
+## Package Sources
 
-## Image Purpose
+Nagios is not in UBI or RHEL, so the image installs `epel-release` and takes
+its packages from **EPEL 10**. It registers with RHSM at build time (secrets
+`activation_key` and `org_id`, registration skipped when they are absent) so
+EPEL dependencies resolve, and unregisters afterwards.
 
-Nagios Core monitoring for all crunchtools infrastructure on lotor. Replaces Zabbix (RT #1459). Dual notification: email via local Postfix relay + webhook via Trentina alert ingress to Hermes agent.
+The image version tracks this repo's packaging and configuration, not the
+upstream Nagios Core release: a rebuild that only picks up a newer EPEL
+`nagios` RPM is a PATCH.
 
-## Base Image
+## Packages and Services
 
-`quay.io/crunchtools/ubi10-httpd` — provides Apache httpd for the Nagios CGI web interface. No PHP or Perl needed (Nagios CGIs are compiled C).
+- **Packages:** nagios; nagios-plugins-ping, -http, -tcp, -load, -disk,
+  -procs, -swap, -users, -ssh, -nrpe, -by_ssh, -ntp, -dns; curl, jq, mailx.
+- **Enabled:** nagios, httpd, `nagios-fix-perms`.
+- **nagios-fix-perms.service:** a oneshot ordered before nagios and httpd
+  that re-adds `apache` to the `nagios` group and resets the command pipe
+  directory to 2770 on every boot, because the container runs with
+  `--tmpfs /etc`, which wipes `/etc/group` from the image layer.
+- `check_ping` is setuid; the CGI admin user is renamed from `nagiosadmin`
+  to `admin`; Apache's `welcome.conf` is removed.
 
-## Packages (from EPEL 10)
+## Runtime Configuration
 
-- `nagios` — Nagios Core daemon
-- `nagios-plugins-all` — full plugin set
-- `nagios-plugins-nrpe` — NRPE client for host-level checks
-- `nagios-plugins-by_ssh` — SSH-based remote checks
-- `curl` — for Trentina webhook notifications
-- `jq` — JSON processing in notification scripts
-
-## Configuration
-
-- Base configs (commands, contacts, templates, timeperiods) baked into image at `/etc/nagios/objects/`
-- Runtime host/service configs mounted from host at `/etc/nagios/objects/custom/`
-- Runtime configs tracked in `fatherlinux/lotor.dc3.crunchtools.com-srv` repo
+The stock object configs (commands, contacts, templates, timeperiods) stay
+in `/etc/nagios/objects/`. Host and service definitions, notification scripts
+and credentials are bind-mounted at runtime: `nagios.cfg` gains
+`cfg_dir=/etc/nagios/objects/custom`, and `/etc/nagios/auth` is created as a
+mount point.
 
 ## Notifications
 
-Two contacts in every contact group:
-1. **scott** — email via local Postfix relay (no credentials to expire)
-2. **hermes** — webhook via Trentina coded URL to Hermes agent
+Every contact group carries two contacts: email to the maintainer through the
+local Postfix relay (`mailx`, no credentials to expire), and a webhook through
+Trentina's alert ingress to the Hermes agent (`curl`, `jq`).
 
-## Containerfile Conventions
+## Image Tests
 
-Single `Containerfile` at the repo root. Packages install with `dnf` from EPEL 10
-in one layer, followed by `dnf clean all`. OCI `LABEL` metadata declares the
-maintainer, description, source repo and license.
+`tests/test-image.sh` runs in CI on every push and pull request, before
+anything is pushed. `--static` checks packages, config file presence,
+enabled services and the `/sbin/init` entrypoint; `--runtime` starts the
+container and checks nagios and httpd are active, port 80 is listening and
+the web UI responds.
 
-## Testing
+## History
 
-`tests/test-image.sh` runs in CI on every push and pull request, against an image
-built from the current tree, before anything is pushed to Quay.
-
-- Build test: the image must build from the `Containerfile` with no cached layers
-- Static: package installation, config file presence, systemd enablement
-- Smoke test (runtime): services start (nagios, httpd), web UI responds, port 80
-  listening
-
-## Quality Gates
-
-A push to `quay.io/crunchtools/nagios` happens only after the build, static and
-smoke tests all pass. A failing test fails the workflow and blocks the push.
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0.0 | 2026-08-22 | Initial Nagios Core container image |
+| 1.0.1 | 2026-09-25 | Gatehouse review, triage and pre-commit gates |
+| 1.1.0 | 2026-10-02 | Manifest under constitution v1.18.0: profile restatement removed, image specifics kept |
