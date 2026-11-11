@@ -35,7 +35,11 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
 RUN subscription-manager unregister 2>/dev/null || true
 
 # Structural setup — these rarely change
-RUN chown -R root:nagios /etc/nagios/private && \
+# The packaged sample objects must be readable by nagios, so the image can boot
+# Nagios on its own config in the release gate (RT#1550). Production bind-mounts
+# its real configs over these, so this changes nothing there.
+RUN chgrp -R nagios /etc/nagios/objects && chmod -R g+rX /etc/nagios/objects && \
+    chown -R root:nagios /etc/nagios/private && \
     mkdir -p /var/spool/nagios/checkresults /var/spool/nagios/cmd \
              /var/log/nagios/rw /var/log/nagios/spool \
              /etc/nagios/objects/custom /etc/nagios/auth && \
