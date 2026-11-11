@@ -5,7 +5,7 @@
 
 set -uo pipefail
 
-RUNTIME="${CONTAINER_RUNTIME:-docker}"
+RUNTIME="${CONTAINER_RUNTIME:-podman}"
 PASS=0
 FAIL=0
 
@@ -44,23 +44,18 @@ static_tests() {
     check "httpd service enabled"                run_in_image "systemctl is-enabled httpd"
     check "nagios-fix-perms service enabled"     run_in_image "systemctl is-enabled nagios-fix-perms"
     check "entrypoint is /sbin/init" \
-        $RUNTIME inspect "$IMAGE" --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init
+        bash -c "$RUNTIME inspect '$IMAGE' --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init"
 }
 
 runtime_tests() {
     local image="$1"
     local container="nagios-test-$$"
-    echo "=== Runtime tests for $image (requires bind-mounted configs) ==="
-    echo "  SKIP: runtime tests require Nagios configs (run locally with --runtime)"
-    return 0
+    echo "=== Runtime tests for $image (the image's own sample config) ==="
 
     trap "$RUNTIME rm -f $container >/dev/null 2>&1 || true" EXIT
 
-    $RUNTIME run -d --name "$container" \
-        --privileged --cgroupns=host \
-        --tmpfs /tmp \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        "$image"
+    # Rootless, as the CI gate runs it: podman sets up systemd's mounts.
+    $RUNTIME run -d --name "$container" --systemd=always "$image" >/dev/null
 
     echo "  Waiting for systemd..."
     for i in $(seq 1 30); do
@@ -90,7 +85,8 @@ runtime_tests() {
         $RUNTIME exec "$container" ss -tlnp '( sport = :80 )'
 
     check "nagios web UI responds" \
-        $RUNTIME exec "$container" curl -s -o /dev/null -w '%{http_code}' http://localhost/nagios/ | grep -qE '200|401'
+        $RUNTIME exec "$container" sh -c \
+        "curl -s -o /dev/null -w '%{http_code}' http://localhost/nagios/ | grep -qE '200|401'"
 
     if [ $FAIL -gt 0 ]; then
         echo "  --- DEBUG ---"
