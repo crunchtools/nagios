@@ -26,7 +26,7 @@ jobs:
       # nagios-fix-perms is a oneshot: it exits after it runs, so it is not
       # "active"; a failure of it leaves systemd degraded, which the gate rejects.
       boot-units: "nagios.service httpd.service"
-      contract-test: bash tests/test-image.sh --static "$IMAGE"
+      contract-test: bash tests/test-image.sh --all "$IMAGE"
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

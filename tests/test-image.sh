@@ -50,17 +50,12 @@ static_tests() {
 runtime_tests() {
     local image="$1"
     local container="nagios-test-$$"
-    echo "=== Runtime tests for $image (requires bind-mounted configs) ==="
-    echo "  SKIP: runtime tests require Nagios configs (run locally with --runtime)"
-    return 0
+    echo "=== Runtime tests for $image (the image's own sample config) ==="
 
     trap "$RUNTIME rm -f $container >/dev/null 2>&1 || true" EXIT
 
-    $RUNTIME run -d --name "$container" \
-        --privileged --cgroupns=host \
-        --tmpfs /tmp \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        "$image"
+    # Rootless, as the CI gate runs it: podman sets up systemd's mounts.
+    $RUNTIME run -d --name "$container" --systemd=always "$image" >/dev/null
 
     echo "  Waiting for systemd..."
     for i in $(seq 1 30); do
@@ -90,7 +85,8 @@ runtime_tests() {
         $RUNTIME exec "$container" ss -tlnp '( sport = :80 )'
 
     check "nagios web UI responds" \
-        $RUNTIME exec "$container" curl -s -o /dev/null -w '%{http_code}' http://localhost/nagios/ | grep -qE '200|401'
+        $RUNTIME exec "$container" sh -c \
+        "curl -s -o /dev/null -w '%{http_code}' http://localhost/nagios/ | grep -qE '200|401'"
 
     if [ $FAIL -gt 0 ]; then
         echo "  --- DEBUG ---"
