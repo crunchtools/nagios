@@ -5,7 +5,7 @@
 
 set -uo pipefail
 
-RUNTIME="${CONTAINER_RUNTIME:-docker}"
+RUNTIME="${CONTAINER_RUNTIME:-podman}"
 PASS=0
 FAIL=0
 
@@ -44,7 +44,7 @@ static_tests() {
     check "httpd service enabled"                run_in_image "systemctl is-enabled httpd"
     check "nagios-fix-perms service enabled"     run_in_image "systemctl is-enabled nagios-fix-perms"
     check "entrypoint is /sbin/init" \
-        $RUNTIME inspect "$IMAGE" --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init
+        bash -c "$RUNTIME inspect '$IMAGE' --format '{{index .Config.Entrypoint 0}}' | grep -q /sbin/init"
 }
 
 runtime_tests() {
