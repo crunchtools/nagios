@@ -1,17 +1,20 @@
 FROM quay.io/crunchtools/ubi10-httpd
 
-# Register with RHSM using activation key (secrets mounted at build time, never in image layers)
+# Register with RHSM, install, and unregister in ONE layer (constitution II):
+# nothing is committed to a layer, and unregister+clean run on any exit — even
+# if the install below fails — so no RHSM consumer leaks as a ghost host.
 RUN --mount=type=secret,id=activation_key \
-    --mount=type=secret,id=org_id \
-    if [ -f /run/secrets/activation_key ] && [ -f /run/secrets/org_id ]; then \
-        subscription-manager register \
-            --activationkey="$(cat /run/secrets/activation_key)" \
-            --org="$(cat /run/secrets/org_id)"; \
-    fi
-
+    --mount=type=secret,id=org_id <<'EOF'
+set -euo pipefail
+if [ -s /run/secrets/activation_key ] && [ -s /run/secrets/org_id ]; then
+    subscription-manager register \
+        --activationkey="$(cat /run/secrets/activation_key)" \
+        --org="$(cat /run/secrets/org_id)"
+    trap 'subscription-manager unregister || true; subscription-manager clean || true' EXIT
+fi
 # EPEL 10 for Nagios packages
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
-    dnf install -y \
+dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+dnf install -y \
     nagios \
     nagios-plugins-ping \
     nagios-plugins-http \
@@ -28,11 +31,9 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
     nagios-plugins-dns \
     curl \
     jq \
-    mailx \
-    && dnf clean all
-
-# Unregister from RHSM to avoid leaking entitlements
-RUN subscription-manager unregister 2>/dev/null || true
+    mailx
+dnf clean all
+EOF
 
 # Structural setup — these rarely change
 # The packaged sample objects must be readable by nagios, so the image can boot
